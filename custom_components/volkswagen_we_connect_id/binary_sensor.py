@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from weconnect import weconnect
 from weconnect.elements.plug_status import PlugStatus
+from weconnect.elements.lights_status import LightsStatus
 from weconnect.elements.window_heating_status import WindowHeatingStatus
 
 from homeassistant.components.binary_sensor import (
@@ -25,103 +26,105 @@ class VolkswagenIdBinaryEntityDescription(BinarySensorEntityDescription):
 
     value: Callable = lambda x, y: x
     on_value: object | None = None
+    enabled: Callable = lambda x, y: x
 
 
 SENSORS: tuple[VolkswagenIdBinaryEntityDescription, ...] = (
     VolkswagenIdBinaryEntityDescription(
         key="climatisationWithoutExternalPower",
         name="Climatisation Without External Power",
+        icon="mdi:fan",
         value=lambda data: data["climatisation"][
             "climatisationSettings"
-        ].climatisationWithoutExternalPower.value,
+        ].climatisationWithoutExternalPower,
     ),
     VolkswagenIdBinaryEntityDescription(
         key="climatizationAtUnlock",
         name="Climatisation At Unlock",
+        icon="mdi:fan",
         value=lambda data: data["climatisation"][
             "climatisationSettings"
-        ].climatizationAtUnlock.value,
+        ].climatizationAtUnlock,
     ),
     VolkswagenIdBinaryEntityDescription(
         key="zoneFrontLeftEnabled",
         name="Zone Front Left Enabled",
+        icon="mdi:car-seat",
         value=lambda data: data["climatisation"][
             "climatisationSettings"
-        ].zoneFrontLeftEnabled.value,
+        ].zoneFrontLeftEnabled,
     ),
     VolkswagenIdBinaryEntityDescription(
         key="zoneFrontRightEnabled",
         name="Zone Front Right Enabled",
+        icon="mdi:car-seat",
         value=lambda data: data["climatisation"][
             "climatisationSettings"
-        ].zoneFrontRightEnabled.value,
+        ].zoneFrontRightEnabled,
     ),
     VolkswagenIdBinaryEntityDescription(
         key="windowHeatingEnabled",
         name="Window Heating Enabled",
+        icon="mdi:car-defrost-front",
         value=lambda data: data["climatisation"][
             "climatisationSettings"
-        ].windowHeatingEnabled.value,
+        ].windowHeatingEnabled,
     ),
     VolkswagenIdBinaryEntityDescription(
         key="frontWindowHeatingState",
         name="Front Window Heating State",
+        icon="mdi:car-defrost-front",
         value=lambda data: data["climatisation"]["windowHeatingStatus"]
         .windows["front"]
-        .windowHeatingState.value,
+        .windowHeatingState,
         on_value=WindowHeatingStatus.Window.WindowHeatingState.ON,
     ),
     VolkswagenIdBinaryEntityDescription(
         key="rearWindowHeatingState",
         name="Rear Window Heating State",
+        icon="mdi:car-defrost-rear",
         value=lambda data: data["climatisation"]["windowHeatingStatus"]
         .windows["rear"]
-        .windowHeatingState.value,
+        .windowHeatingState,
         on_value=WindowHeatingStatus.Window.WindowHeatingState.ON,
-    ),
-    VolkswagenIdBinaryEntityDescription(
-        key="autoUnlockPlugWhenCharged",
-        name="Auto Unlock Plug When Charged",
-        value=lambda data: data["charging"][
-            "chargingSettings"
-        ].autoUnlockPlugWhenCharged.value,
-        on_value="on",  # ChargingSettings.UnlockPlugState.ON,
-    ),
-    VolkswagenIdBinaryEntityDescription(
-        key="plugConnectionState",
-        name="Plug Connection State",
-        value=lambda data: data["charging"]["plugStatus"].plugConnectionState.value,
-        device_class=BinarySensorDeviceClass.PLUG,
-        on_value=PlugStatus.PlugConnectionState.CONNECTED,
-    ),
-    VolkswagenIdBinaryEntityDescription(
-        key="plugLockState",
-        name="Plug Lock State",
-        value=lambda data: data["charging"]["plugStatus"].plugLockState.value,
-        device_class=BinarySensorDeviceClass.LOCK,
-        on_value=PlugStatus.PlugLockState.UNLOCKED,
     ),
     VolkswagenIdBinaryEntityDescription(
         key="insufficientBatteryLevelWarning",
         name="Insufficient Battery Level Warning",
+        icon="mdi:battery-alert-variant-outline",
         value=lambda data: data["readiness"][
             "readinessStatus"
-        ].connectionWarning.insufficientBatteryLevelWarning.value,
+        ].connectionWarning.insufficientBatteryLevelWarning,
     ),
     VolkswagenIdBinaryEntityDescription(
         name="Car Is Online",
         key="isOnline",
         value=lambda data: data["readiness"][
             "readinessStatus"
-        ].connectionState.isOnline.value,
+        ].connectionState.isOnline,
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
     ),
     VolkswagenIdBinaryEntityDescription(
         name="Car Is Active",
         key="isActive",
+        icon="mdi:car-side",
         value=lambda data: data["readiness"][
             "readinessStatus"
-        ].connectionState.isActive.value,
+        ].connectionState.isActive,
+    ),
+    VolkswagenIdBinaryEntityDescription(
+        name="Lights Right",
+        key="lightsRight",
+        icon="mdi:car-light-dimmed",
+        value=lambda data: data["vehicleLights"]["lightsStatus"].lights["right"].status,
+        on_value=LightsStatus.Light.LightState.ON,
+    ),
+    VolkswagenIdBinaryEntityDescription(
+        name="Lights Left",
+        key="lightsLeft",
+        icon="mdi:car-light-dimmed",
+        value=lambda data: data["vehicleLights"]["lightsStatus"].lights["left"].status,
+        on_value=LightsStatus.Light.LightState.ON,
     ),
 )
 
@@ -168,12 +171,11 @@ class VolkswagenIDSensor(VolkswagenIDBaseEntity, BinarySensorEntity):
     def is_on(self) -> bool:
         """Return true if sensor is on."""
         try:
-          state = self.entity_description.value(self.data.domains)
-          if isinstance(state, bool):
-              return state
+            state = self.entity_description.value(self.data.domains)
+            if state.enabled and isinstance(state.value, bool):
+                return state.value
 
-          state = get_object_value(state)
-          return state == get_object_value(self.entity_description.on_value)
+            return False
 
         except KeyError:
-          return None
+            return None

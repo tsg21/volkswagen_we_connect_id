@@ -11,21 +11,19 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
+    SensorDeviceClass,
 )
 from homeassistant.const import (
-    DEVICE_CLASS_BATTERY,
-    DEVICE_CLASS_POWER,
-    DEVICE_CLASS_TEMPERATURE,
     LENGTH_KILOMETERS,
-    LENGTH_MILES,
     PERCENTAGE,
-    POWER_KILO_WATT,
     SPEED_KILOMETERS_PER_HOUR,
-    TEMP_CELSIUS,
-    TEMP_FAHRENHEIT,
     TIME_DAYS,
     TIME_MINUTES,
+    UnitOfPower,
+    UnitOfTemperature,
 )
+
+
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -44,6 +42,7 @@ SENSORS: tuple[VolkswagenIdEntityDescription, ...] = (
     VolkswagenIdEntityDescription(
         key="climatisationState",
         name="Climatisation State",
+        icon="mdi:fan",
         value=lambda data: data["climatisation"][
             "climatisationStatus"
         ].climatisationState.value,
@@ -51,28 +50,20 @@ SENSORS: tuple[VolkswagenIdEntityDescription, ...] = (
     VolkswagenIdEntityDescription(
         key="remainingClimatisationTime_min",
         name="Remaining Climatisation Time",
+        icon="mdi:fan-clock",
         native_unit_of_measurement=TIME_MINUTES,
         value=lambda data: data["climatisation"][
             "climatisationStatus"
         ].remainingClimatisationTime_min.value,
     ),
     VolkswagenIdEntityDescription(
-        key="targetTemperature_C",
-        name="Target Temperature C",
-        device_class=DEVICE_CLASS_TEMPERATURE,
-        native_unit_of_measurement=TEMP_CELSIUS,
+        key="targetTemperature",
+        name="Target Temperature",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         value=lambda data: data["climatisation"][
             "climatisationSettings"
         ].targetTemperature_C.value,
-    ),
-    VolkswagenIdEntityDescription(
-        key="targetTemperature_F",
-        name="Target Temperature F",
-        device_class=DEVICE_CLASS_TEMPERATURE,
-        native_unit_of_measurement=TEMP_FAHRENHEIT,
-        value=lambda data: data["climatisation"][
-            "climatisationSettings"
-        ].targetTemperature_F.value,
     ),
     VolkswagenIdEntityDescription(
         key="unitInCar",
@@ -90,6 +81,7 @@ SENSORS: tuple[VolkswagenIdEntityDescription, ...] = (
     VolkswagenIdEntityDescription(
         key="remainingChargingTimeToComplete_min",
         name="Remaining Charging Time",
+        icon="mdi:battery-clock",
         native_unit_of_measurement=TIME_MINUTES,
         value=lambda data: data["charging"][
             "chargingStatus"
@@ -104,29 +96,33 @@ SENSORS: tuple[VolkswagenIdEntityDescription, ...] = (
     VolkswagenIdEntityDescription(
         key="chargePower_kW",
         name="Charge Power",
-        native_unit_of_measurement=POWER_KILO_WATT,
-        device_class=DEVICE_CLASS_POWER,
+        native_unit_of_measurement=UnitOfPower.KILO_WATT,
+        device_class=SensorDeviceClass.POWER,
         value=lambda data: data["charging"]["chargingStatus"].chargePower_kW.value,
     ),
     VolkswagenIdEntityDescription(
         key="chargeRate_kmph",
         name="Charge Rate",
         native_unit_of_measurement=SPEED_KILOMETERS_PER_HOUR,
+        device_class=SensorDeviceClass.SPEED,
         value=lambda data: data["charging"]["chargingStatus"].chargeRate_kmph.value,
     ),
     VolkswagenIdEntityDescription(
         key="chargingSettings",
         name="Charging Settings",
+        icon="mdi:ev-station",
         value=lambda data: data["charging"]["chargingStatus"].chargingSettings.value,
     ),
     VolkswagenIdEntityDescription(
         key="chargeType",
         name="Charge Type",
+        icon="mdi:ev-station",
         value=lambda data: data["charging"]["chargingStatus"].chargeType.value,
     ),
     VolkswagenIdEntityDescription(
         key="maxChargeCurrentAC",
         name="Max Charge Current AC",
+        icon="mdi:ev-station",
         value=lambda data: data["charging"][
             "chargingSettings"
         ].maxChargeCurrentAC.value,
@@ -134,56 +130,221 @@ SENSORS: tuple[VolkswagenIdEntityDescription, ...] = (
     VolkswagenIdEntityDescription(
         key="targetSOC_pct",
         name="Target State of Charge",
-        device_class=DEVICE_CLASS_BATTERY,
+        device_class=SensorDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
         value=lambda data: data["charging"]["chargingSettings"].targetSOC_pct.value,
     ),
     VolkswagenIdEntityDescription(
         key="currentSOC_pct",
         name="State of Charge",
-        device_class=DEVICE_CLASS_BATTERY,
+        device_class=SensorDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
         value=lambda data: data["charging"]["batteryStatus"].currentSOC_pct.value,
     ),
     VolkswagenIdEntityDescription(
-        name="Range in Kilometers",
-        key="cruisingRangeElectric_km",
+        name="Range",
+        key="cruisingRangeElectric",
+        icon="mdi:car-arrow-right",
         native_unit_of_measurement=LENGTH_KILOMETERS,
         value=lambda data: data["charging"][
             "batteryStatus"
         ].cruisingRangeElectric_km.value,
     ),
     VolkswagenIdEntityDescription(
-        name="Range in Miles",
-        key="cruisingRangeElectric_mi",
-        native_unit_of_measurement=LENGTH_MILES,
-        value=lambda data: data["charging"][
-            "batteryStatus"
-        ].cruisingRangeElectric_km.value,
+         name="Health Inspection",
+         key="inspectionDue",
+         icon="mdi:wrench-clock-outline",
+         native_unit_of_measurement=TIME_DAYS,
+         value=lambda data: data["vehicleHealthInspection"][
+             "maintenanceStatus"
+         ].inspectionDue_days.value,
     ),
     VolkswagenIdEntityDescription(
-        name="Health Inspection",
-        key="inspectionDue",
-        native_unit_of_measurement=TIME_DAYS,
-        value=lambda data: data["vehicleHealthInspection"][
-            "maintenanceStatus"
-        ].inspectionDue_days.value,
-    ),
-    VolkswagenIdEntityDescription(
-        name="Odometer in Kilometers",
-        key="odometer_km",
+        name="Odometer",
+        key="odometer",
+        icon="mdi:car-cruise-control",
         native_unit_of_measurement=LENGTH_KILOMETERS,
-        value=lambda data: data["measurements"][
-            "odometerStatus"
-        ].odometer.value,
+        value=lambda data: data["measurements"]["odometerStatus"].odometer.value,
     ),
     VolkswagenIdEntityDescription(
-        name="Odometer in Miles",
-        key="odometer_mi",
-        native_unit_of_measurement=LENGTH_MILES,
-        value=lambda data: data["measurements"][
-            "odometerStatus"
-        ].odometer.value,
+        key="doorLockStatus",
+        name="Door Lock Status",
+        icon="mdi:car-door-lock",
+        value=lambda data: data["access"]["accessStatus"].doorLockStatus.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="bonnetLockStatus",
+        name="Bonnet Lock Status",
+        icon="mdi:lock-outline",
+        value=lambda data: data["access"]["accessStatus"]
+        .doors["bonnet"]
+        .lockState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="trunkLockStatus",
+        name="Trunk Lock Status",
+        icon="mdi:lock-outline",
+        value=lambda data: data["access"]["accessStatus"]
+        .doors["trunk"]
+        .lockState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="rearRightLockStatus",
+        name="Door Rear Right Lock Status",
+        icon="mdi:car-door-lock",
+        value=lambda data: data["access"]["accessStatus"]
+        .doors["rearRight"]
+        .lockState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="rearLeftLockStatus",
+        name="Door Rear Left Lock Status",
+        icon="mdi:car-door-lock",
+        value=lambda data: data["access"]["accessStatus"]
+        .doors["rearLeft"]
+        .lockState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="frontLeftLockStatus",
+        name="Door Front Left Lock Status",
+        icon="mdi:car-door-lock",
+        value=lambda data: data["access"]["accessStatus"]
+        .doors["frontLeft"]
+        .lockState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="frontRightLockStatus",
+        name="Door Front Right Lock Status",
+        icon="mdi:car-door-lock",
+        value=lambda data: data["access"]["accessStatus"]
+        .doors["frontRight"]
+        .lockState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="bonnetOpenStatus",
+        name="Bonnet Open Status",
+        value=lambda data: data["access"]["accessStatus"]
+        .doors["bonnet"]
+        .openState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="trunkOpenStatus",
+        name="Trunk Open Status",
+        value=lambda data: data["access"]["accessStatus"]
+        .doors["trunk"]
+        .openState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="rearRightOpenStatus",
+        name="Door Rear Right Open Status",
+        icon="mdi:car-door",
+        value=lambda data: data["access"]["accessStatus"]
+        .doors["rearRight"]
+        .openState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="rearLeftOpenStatus",
+        name="Door Rear Left Open Status",
+        icon="mdi:car-door",
+        value=lambda data: data["access"]["accessStatus"]
+        .doors["rearLeft"]
+        .openState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="frontLeftOpenStatus",
+        name="Door Front Left Open Status",
+        icon="mdi:car-door",
+        value=lambda data: data["access"]["accessStatus"]
+        .doors["frontLeft"]
+        .openState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="frontRightOpenStatus",
+        name="Door Front Right Open Status",
+        icon="mdi:car-door",
+        value=lambda data: data["access"]["accessStatus"]
+        .doors["frontRight"]
+        .openState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="sunRoofStatus",
+        name="Sunroof Open Status",
+        value=lambda data: data["access"]["accessStatus"]
+        .windows["sunRoof"]
+        .openState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="roofCoverStatus",
+        name="Sunroof Cover Status",
+        value=lambda data: data["access"]["accessStatus"]
+        .windows["roofCover"]
+        .openState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="windowRearRightOpenStatus",
+        name="Window Rear Right Open Status",
+        icon="mdi:window-closed",
+        value=lambda data: data["access"]["accessStatus"]
+        .windows["rearRight"]
+        .openState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="windowRearLeftOpenStatus",
+        name="Window Rear Left Open Status",
+        icon="mdi:window-closed",
+        value=lambda data: data["access"]["accessStatus"]
+        .windows["rearLeft"]
+        .openState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="windowFrontLeftOpenStatus",
+        name="Window Front Left Open Status",
+        icon="mdi:window-closed",
+        value=lambda data: data["access"]["accessStatus"]
+        .windows["frontLeft"]
+        .openState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="windowfrontRightOpenStatus",
+        name="Window Front Right Open Status",
+        icon="mdi:window-closed",
+        value=lambda data: data["access"]["accessStatus"]
+        .windows["frontRight"]
+        .openState.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="overallStatus",
+        name="Overall Status",
+        icon="mdi:car-info",
+        value=lambda data: data["access"]["accessStatus"].overallStatus.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="autoUnlockPlugWhenCharged",
+        name="Auto Unlock Plug When Charged",
+        icon="mdi:ev-plug-type2",
+        value=lambda data: data["charging"][
+            "chargingSettings"
+        ].autoUnlockPlugWhenCharged.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="autoUnlockPlugWhenChargedAC",
+        name="Auto Unlock Plug When Charged AC",
+        icon="mdi:ev-plug-type2",
+        value=lambda data: data["charging"][
+            "chargingSettings"
+        ].autoUnlockPlugWhenChargedAC.value,
+    ),
+    VolkswagenIdEntityDescription(
+        key="plugConnectionState",
+        name="Plug Connection State",
+        icon="mdi:ev-plug-type2",
+        value=lambda data: data["charging"]["plugStatus"].plugConnectionState,
+    ),
+    VolkswagenIdEntityDescription(
+        key="plugLockState",
+        name="Plug Lock State",
+        icon="mdi:ev-plug-type2",
+        value=lambda data: data["charging"]["plugStatus"].plugLockState,
     ),
 )
 
@@ -225,19 +386,17 @@ class VolkswagenIDSensor(VolkswagenIDBaseEntity, SensorEntity):
         self._coordinator = coordinator
         self._attr_name = f"{self.data.nickname} {sensor.name}"
         self._attr_unique_id = f"{self.data.vin}-{sensor.key}"
-        self._attr_native_unit_of_measurement = sensor.native_unit_of_measurement
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+        if sensor.native_unit_of_measurement:
+            self._attr_native_unit_of_measurement = sensor.native_unit_of_measurement
+            self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def native_value(self) -> StateType:
         """Return the state."""
 
-        state = get_object_value(self.entity_description.value(self.data.domains))
-
-        if self.entity_description.key == "cruisingRangeElectric_mi":
-            state = int(float(state) * 0.62137)
-
-        if state and self.entity_description.key == "odometer_mi":
-            state = int(float(state) * 0.62137)
+        try:
+            state = get_object_value(self.entity_description.value(self.data.domains))
+        except (KeyError, ValueError):
+            return None
 
         return cast(StateType, state)
